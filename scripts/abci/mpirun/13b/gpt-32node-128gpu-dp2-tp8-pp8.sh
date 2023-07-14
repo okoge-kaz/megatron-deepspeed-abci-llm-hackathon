@@ -19,8 +19,8 @@ GPUS_PER_NODE=4
 NNODES=$NHOSTS
 WORLD_SIZE=$(($GPUS_PER_NODE * $NNODES))
 
-TP_SIZE=4
-PP_SIZE=8
+TP_SIZE=8
+PP_SIZE=8 # num_layer % pp_size == 0
 DP_SIZE=$(($WORLD_SIZE / ($TP_SIZE * $PP_SIZE)))
 
 echo -e "\nWORLD_SIZE: $WORLD_SIZE, GPUS_PER_NODE: $GPUS_PER_NODE, NNODES: $NNODES"
@@ -41,7 +41,7 @@ export MASTER_PORT=$((10000 + ($JOB_ID % 50000)))
 
 # hostfile
 HOSTFILE_NAME=./hostfile/hostfile_${JOB_ID}
-cat $SGE_JOB_HOSTLIST > $HOSTFILE_NAME
+cat $SGE_JOB_HOSTLIST >$HOSTFILE_NAME
 
 # model size (13b)
 NUM_LAYERS=40
@@ -50,13 +50,12 @@ NUM_ATTENTION_HEADS=40
 SEQ_LENGTH=2048
 MAX_POSITION_EMBEDDINGS=2048
 
-
 mpirun -np $WORLD_SIZE --npernode $GPUS_PER_NODE \
   -hostfile $HOSTFILE_NAME \
   -x MASTER_ADDR=$MASTER_ADDR \
   -x MASTER_PORT=$MASTER_PORT \
   -bind-to none -map-by slot \
-  -x NCCL_DEBUG=INFO  -x PATH \
+  -x NCCL_DEBUG=INFO -x PATH \
   -mca pml ob1 -mca btl ^openib \
   python pretrain_gpt.py \
   --tensor-model-parallel-size $TP_SIZE \
