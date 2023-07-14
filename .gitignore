@@ -1,6 +1,7 @@
 __pycache__
 .python-version
 
+output/
 *.err
 *.out
 .d000*
